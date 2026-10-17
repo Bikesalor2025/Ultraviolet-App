@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+	<meta name="apple-mobile-web-app-capable" content="yes" />
+	<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+	<meta name="theme-color" content="#2b0505" />
+	<title>My Playlist</title>
+	<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+	<header class="top">
+		<h1>My Playlist</h1>
+		<p id="summary" class="muted"></p>
+		<div class="top-actions">
+			<button id="playAll" class="pill primary">Play</button>
+			<button id="shuffleAll" class="pill">Shuffle</button>
+		</div>
+		<label class="pill add">
+			+ Add music files
+			<input id="fileInput" type="file" accept="audio/*" multiple hidden />
+		</label>
+	</header>
+
+	<ul id="library" class="list"></ul>
+
+	<footer class="player">
+		<div class="now">
+			<div class="now-text">
+				<div id="nowTitle" class="title">Not playing</div>
+				<div id="nowArtist" class="muted"></div>
+			</div>
+		</div>
+		<div class="seek">
+			<span id="curTime">0:00</span>
+			<input id="seek" type="range" min="0" max="0" step="0.1" value="0" />
+			<span id="durTime">0:00</span>
+		</div>
+		<div class="controls">
+			<button id="shuffleBtn" class="icon" aria-label="Shuffle"></button>
+			<button id="prevBtn" class="icon" aria-label="Previous"></button>
+			<button id="playBtn" class="icon big" aria-label="Play"></button>
+			<button id="nextBtn" class="icon" aria-label="Next"></button>
+			<button id="repeatBtn" class="icon" aria-label="Repeat"></button>
+			<button id="queueBtn" class="icon" aria-label="Queue"></button>
+		</div>
+	</footer>
+
+	<dialog id="queuePanel" class="sheet">
+		<div class="sheet-head">
+			<h2>Queue</h2>
+			<button id="closeQueue" class="pill">Done</button>
+		</div>
+		<div id="queueBody"></div>
+	</dialog>
+
+	<dialog id="trackMenu" class="sheet small">
+		<div id="menuTitle" class="title"></div>
+		<div id="menuButtons" class="menu"></div>
+	</dialog>
+
+	<input id="replaceInput" type="file" accept="audio/*" hidden />
+	<div id="toast" class="toast"></div>
+	<audio id="audio" preload="metadata"></audio>
+
+	<script src="app.js"></script>
+</body>
+</html>
