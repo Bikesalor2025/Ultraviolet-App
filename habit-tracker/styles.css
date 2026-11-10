@@ -160,7 +160,7 @@ button:disabled { cursor: default; }
 }
 
 /* 16px inputs stop iOS from zooming the page on focus. */
-input[type="text"], input[type="password"], textarea {
+input[type="text"], input[type="password"], input[type="time"], textarea {
   width: 100%;
   font: inherit;
   font-size: 16px;
@@ -177,11 +177,35 @@ input:focus-visible, textarea:focus-visible {
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
 }
 textarea { resize: none; min-height: 120px; display: block; }
+input[type="time"] { width: auto; min-width: 124px; min-height: 50px; }
 
 label { display: block; font-size: 0.88rem; font-weight: 600; color: var(--muted); }
 label input { margin-top: 6px; }
 
 form { display: grid; gap: 12px; }
+.field { width: 100%; display: grid; gap: 8px; }
+.field-label { font-size: 0.88rem; font-weight: 600; color: var(--muted); }
+.small { font-size: 0.82rem; }
+.small a { color: var(--text); text-underline-offset: 3px; }
+
+/* Weekday toggles for a habit's due days. */
+.day-picker { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
+.day-chip {
+  min-height: 44px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface-2);
+  color: var(--muted);
+  font-weight: 650;
+  transition: transform 0.15s var(--ease), background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+.day-chip:active { transform: scale(0.92); }
+.day-chip[aria-pressed="true"] {
+  border-color: transparent;
+  background: color-mix(in srgb, var(--accent) 20%, var(--surface-2));
+  color: color-mix(in srgb, var(--accent) 72%, white);
+}
 .inline-form { grid-template-columns: minmax(0, 1fr) auto; }
 .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
 .row.end { justify-content: flex-end; }
@@ -383,6 +407,19 @@ body[data-tier="cold"] .tier-badge { background: var(--surface-2); color: var(--
 }
 .day.done.link-l::before { left: 0; border-top-left-radius: 0; border-bottom-left-radius: 0; }
 .day.done.link-r::before { right: 0; border-top-right-radius: 0; border-bottom-right-radius: 0; }
+
+/* Rest days are dimmed; a thin line carries the streak across them. */
+.day.off:not(:disabled) { color: #6f6760; }
+.day.bridge::before {
+  content: "";
+  position: absolute;
+  top: calc(50% - 1px);
+  left: -3px;
+  right: -3px;
+  height: 2px;
+  background: color-mix(in srgb, var(--accent) 20%, transparent);
+}
+.day.bridge .n { background: var(--surface); }
 
 .day.today .n { box-shadow: inset 0 0 0 1.5px var(--accent); }
 .day.today.done .n { background: var(--accent); color: var(--on-accent); box-shadow: none; }

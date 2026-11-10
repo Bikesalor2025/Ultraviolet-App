@@ -100,7 +100,7 @@
           </div>
           <div id="calWeekdays" class="cal-weekdays" aria-hidden="true"></div>
           <div id="calGrid" class="cal-grid"></div>
-          <p class="legend muted">Tap a day to edit it or add a note. A dot marks days with a note.</p>
+          <p id="calLegend" class="legend muted"></p>
         </section>
       </div>
     </main>
@@ -155,6 +155,10 @@
     </header>
     <form id="habitForm">
       <label>Name <input id="habitName" type="text" maxlength="40" required autocomplete="off" placeholder="e.g. Morning run" enterkeyhint="done"></label>
+      <div class="field">
+        <div id="newDueLabel" class="field-label">Due days</div>
+        <div id="newDueDays" class="day-picker" role="group" aria-labelledby="newDueLabel"></div>
+      </div>
       <button class="primary" type="submit">Add habit</button>
     </form>
   </dialog>
@@ -171,6 +175,19 @@
         <input id="renameInput" type="text" maxlength="40" required aria-label="Habit name" autocomplete="off" enterkeyhint="done">
         <button class="ghost" type="submit">Rename</button>
       </form>
+      <div class="field">
+        <div id="dueLabel" class="field-label">Due days</div>
+        <div id="dueDays" class="day-picker" role="group" aria-labelledby="dueLabel"></div>
+        <p class="muted small">Days off never break the streak.</p>
+      </div>
+      <div class="field">
+        <label class="field-label" for="remindTime">Reminder</label>
+        <div class="row">
+          <input id="remindTime" type="time" value="20:00" required>
+          <button id="remindIcs" class="ghost" type="button">Add to calendar</button>
+        </div>
+        <p class="muted small">Adds a repeating event on this habit's due days, and your calendar app alerts you. <a id="remindGoogle" href="#" target="_blank" rel="noopener noreferrer">Use Google Calendar instead</a>.</p>
+      </div>
       <button id="deleteHabitBtn" class="ghost danger" type="button">Delete this habit</button>
     </section>
 

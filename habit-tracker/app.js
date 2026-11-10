@@ -7,6 +7,9 @@ const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const ID_RE = /^[\w-]{1,64}$/;
 const NOTE_RE = /^[\w-]{1,64}\|\d{4}-\d{2}-\d{2}$/;
 const MIN_PASSWORD = 6;
+const ALL_DAYS = [0, 1, 2, 3, 4, 5, 6]; // weekday numbers, Sunday = 0
+const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
+const DEFAULT_REMINDER = '20:00';
 
 const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const $ = (id) => document.getElementById(id);
@@ -36,6 +39,23 @@ function firstDayOfWeek() {
   return /^en-(US|CA)$/i.test(navigator.language) ? 0 : 1;
 }
 
+// ---------- Schedules ----------
+
+// A habit is due on its chosen weekdays. Days off never break a streak.
+function cleanDays(value) {
+  if (!Array.isArray(value)) return ALL_DAYS.slice();
+  const days = ALL_DAYS.filter((d) => value.includes(d));
+  return days.length ? days : ALL_DAYS.slice();
+}
+const isDue = (habit, key) => habit.days.includes(parseKey(key).getDay());
+const everyDay = (habit) => habit.days.length === 7;
+
+function nextDueKey(habit, from) {
+  let key = from;
+  while (!isDue(habit, key)) key = addDays(key, 1);
+  return key;
+}
+
 // ---------- State ----------
 
 function emptyState() {
@@ -58,6 +78,8 @@ function sanitize(data) {
       id: h.id,
       name: (typeof h.name === 'string' ? h.name.trim().slice(0, 40) : '') || 'Habit',
       done,
+      days: cleanDays(h.days),
+      remind: TIME_RE.test(h.remind) ? h.remind : DEFAULT_REMINDER,
       seen: Number.isInteger(h.seen) && h.seen > 0 ? h.seen : 0,
     });
   }
@@ -113,23 +135,32 @@ const activeHabit = () => state.habits.find((h) => h.id === state.active) ?? nul
 function streakInfo(habit) {
   const { done } = habit;
   const today = todayKey();
-  // A streak stays alive until the end of the day after the last check-in.
-  let cursor = done[today] ? today : addDays(today, -1);
+  const keys = Object.keys(done).filter((k) => k <= today).sort();
+  const first = keys[0];
   let current = 0;
-  while (done[cursor]) {
-    current++;
-    cursor = addDays(cursor, -1);
-  }
-  const keys = Object.keys(done).sort();
   let longest = 0;
-  let run = 0;
-  let prev = null;
-  for (const k of keys) {
-    run = prev && addDays(prev, 1) === k ? run + 1 : 1;
-    if (run > longest) longest = run;
-    prev = k;
+  if (first) {
+    // Walk back from today. Only a missed due day ends the streak, and today
+    // doesn't count as missed until it is over.
+    for (let k = today; k >= first; k = addDays(k, -1)) {
+      if (done[k]) current++;
+      else if (isDue(habit, k) && k !== today) break;
+    }
+    let run = 0;
+    for (let k = first; k <= today; k = addDays(k, 1)) {
+      if (done[k]) longest = Math.max(longest, ++run);
+      else if (isDue(habit, k) && k !== today) run = 0;
+    }
   }
-  return { current, longest, total: keys.length, doneToday: !!done[today], atRisk: current > 0 && !done[today] };
+  const dueToday = isDue(habit, today);
+  return {
+    current,
+    longest,
+    total: keys.length,
+    doneToday: !!done[today],
+    dueToday,
+    atRisk: current > 0 && dueToday && !done[today],
+  };
 }
 
 // ---------- Flame, icons, toast ----------
@@ -225,6 +256,8 @@ function renderHabitBar() {
   add.append(icon('plus'), 'New habit');
   add.addEventListener('click', () => {
     $('habitName').value = '';
+    newHabitDays = ALL_DAYS.slice();
+    renderNewHabitDays();
     $('habitDialog').showModal();
   });
   bar.append(add);
@@ -239,8 +272,11 @@ function renderHero(habit, info) {
   $('tierBadge').textContent = tier.name;
 
   let status;
-  if (info.doneToday) status = 'Done for today. See you tomorrow.';
-  else if (info.atRisk) status = 'Check in today to keep your streak.';
+  if (info.doneToday) status = everyDay(habit) ? 'Done for today. See you tomorrow.' : 'Done for today.';
+  else if (!info.dueToday) {
+    const next = parseKey(nextDueKey(habit, addDays(todayKey(), 1))).toLocaleDateString(undefined, { weekday: 'long' });
+    status = `Rest day. Next due ${next}.`;
+  } else if (info.atRisk) status = 'Check in today to keep your streak.';
   else if (info.total) status = 'Your streak ended. Start a new one today.';
   else status = 'Check in to start your streak.';
   $('statusLine').textContent = status;
@@ -248,7 +284,7 @@ function renderHero(habit, info) {
   const btn = $('checkBtn');
   btn.disabled = info.doneToday;
   btn.classList.toggle('done', info.doneToday);
-  $('checkLabel').textContent = info.doneToday ? 'Done today' : 'Check in';
+  $('checkLabel').textContent = info.doneToday ? 'Done today' : info.dueToday ? 'Check in' : 'Check in anyway';
   $('undoBtn').hidden = !info.doneToday;
 
   const next = MILESTONES.find((m) => m > info.current);
@@ -262,12 +298,17 @@ function renderHero(habit, info) {
     $('milestoneFill').style.width = '100%';
   }
 
-  const now = new Date();
-  const prefix = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-`;
-  const monthDone = Object.keys(habit.done).filter((k) => k.startsWith(prefix) && k <= todayKey()).length;
+  // This month: check-ins against the days that were due so far.
+  const today = todayKey();
+  let monthDone = 0;
+  let monthDue = 0;
+  for (let k = `${today.slice(0, 8)}01`; k <= today; k = addDays(k, 1)) {
+    if (habit.done[k]) monthDone++;
+    if (isDue(habit, k)) monthDue++;
+  }
   $('statLongest').textContent = info.longest;
   $('statTotal').textContent = info.total;
-  $('statMonth').textContent = `${Math.round((monthDone / now.getDate()) * 100)}%`;
+  $('statMonth').textContent = monthDue ? `${Math.min(100, Math.round((monthDone / monthDue) * 100))}%` : '–';
 }
 
 function renderCalendar(habit) {
@@ -313,7 +354,10 @@ function renderCalendar(habit) {
     num.textContent = d;
     btn.append(num);
     btn.disabled = key > today;
+    const off = !done && !isDue(habit, key);
     if (done) btn.classList.add('done');
+    if (off) btn.classList.add('off');
+    if (off && restJoins(habit, key, -1) && restJoins(habit, key, 1)) btn.classList.add('bridge');
     if (key === today) btn.classList.add('today');
     if (done && d > 1 && col > 0 && habit.done[addDays(key, -1)]) btn.classList.add('link-l');
     if (done && d < daysInMonth && col < 6 && habit.done[addDays(key, 1)]) btn.classList.add('link-r');
@@ -324,11 +368,25 @@ function renderCalendar(habit) {
       btn.append(dot);
     }
     const label = parseKey(key).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
-    btn.setAttribute('aria-label', `${label}${done ? ', done' : ''}${hasNote ? ', has a note' : ''}`);
+    btn.setAttribute('aria-label', `${label}${done ? ', done' : ''}${off ? ', rest day' : ''}${hasNote ? ', has a note' : ''}`);
     btn.addEventListener('click', () => openDay(key));
     grid.append(btn);
   }
   igniteKey = null;
+  $('calLegend').textContent = everyDay(habit)
+    ? 'Tap a day to edit it or add a note. A dot marks days with a note.'
+    : 'Tap a day to edit it or add a note. Dimmed days are rest days.';
+}
+
+// True when, going one way from a rest day, the next non-rest day is a done
+// day. Used to draw the thin line that carries a streak across days off.
+function restJoins(habit, key, step) {
+  const today = todayKey();
+  for (let i = 0, k = addDays(key, step); i < 7 && k <= today; i++, k = addDays(k, step)) {
+    if (habit.done[k]) return true;
+    if (isDue(habit, k)) return false;
+  }
+  return false;
 }
 
 function updateLockButton() {
@@ -366,10 +424,10 @@ function render() {
 
 // ---------- Actions ----------
 
-function createHabit(rawName) {
+function createHabit(rawName, days = ALL_DAYS) {
   const name = rawName.trim().slice(0, 40);
   if (!name) return false;
-  const habit = { id: crypto.randomUUID(), name, done: {}, seen: 0 };
+  const habit = { id: crypto.randomUUID(), name, done: {}, days: cleanDays(days), remind: DEFAULT_REMINDER, seen: 0 };
   state.habits.push(habit);
   state.active = habit.id;
   viewMonth = monthStart(new Date());
@@ -419,7 +477,7 @@ function openDay(key) {
   $('dayTitle').textContent = parseKey(key).toLocaleDateString(undefined, {
     weekday: 'long', month: 'long', day: 'numeric', year: 'numeric',
   });
-  $('daySub').textContent = habit.name;
+  $('daySub').textContent = isDue(habit, key) ? habit.name : `${habit.name} · Rest day`;
   renderDayToggle();
   renderNote();
   if (!$('dayDialog').open) $('dayDialog').showModal();
@@ -615,7 +673,157 @@ $('firstHabitForm').addEventListener('submit', (e) => {
 
 $('habitForm').addEventListener('submit', (e) => {
   e.preventDefault();
-  if (createHabit($('habitName').value)) $('habitDialog').close();
+  if (createHabit($('habitName').value, newHabitDays)) $('habitDialog').close();
+});
+
+// ---------- Due days and reminders ----------
+
+// Seven weekday toggles in the locale's week order. At least one stays on.
+function renderDayPicker(container, days, onChange) {
+  container.replaceChildren();
+  const first = firstDayOfWeek();
+  for (let i = 0; i < 7; i++) {
+    const wd = (first + i) % 7;
+    const ref = new Date(1970, 0, 4 + wd); // 4 Jan 1970 was a Sunday
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'day-chip';
+    btn.textContent = ref.toLocaleDateString(undefined, { weekday: 'narrow' });
+    btn.setAttribute('aria-label', ref.toLocaleDateString(undefined, { weekday: 'long' }));
+    btn.setAttribute('aria-pressed', String(days.includes(wd)));
+    btn.addEventListener('click', () => {
+      const next = days.includes(wd) ? days.filter((d) => d !== wd) : cleanDays([...days, wd]);
+      if (next.length) onChange(next);
+    });
+    container.append(btn);
+  }
+}
+
+let newHabitDays = ALL_DAYS.slice();
+function renderNewHabitDays() {
+  renderDayPicker($('newDueDays'), newHabitDays, (days) => {
+    newHabitDays = days;
+    renderNewHabitDays();
+  });
+}
+
+function renderHabitSettings() {
+  const habit = activeHabit();
+  $('settingsHabit').hidden = !habit;
+  if (!habit) return;
+  renderDayPicker($('dueDays'), habit.days, (days) => {
+    habit.days = days;
+    // The schedule changed, not the user's effort: no "streak ended" toast.
+    habit.seen = streakInfo(habit).current;
+    saveState();
+    render();
+    renderHabitSettings();
+  });
+  $('remindTime').value = habit.remind;
+  $('remindGoogle').href = googleCalendarUrl(habit);
+}
+
+const BYDAY = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'];
+const stamp = (d) => `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}T${pad(d.getHours())}${pad(d.getMinutes())}00`;
+
+// A repeating five-minute event on the habit's due days, in local time.
+function reminderEvent(habit) {
+  const [hh, mm] = habit.remind.split(':').map(Number);
+  const start = parseKey(nextDueKey(habit, todayKey()));
+  start.setHours(hh, mm);
+  const end = new Date(start.getTime() + 5 * 60_000);
+  return {
+    title: `Check in: ${habit.name}`,
+    start: stamp(start),
+    end: stamp(end),
+    rule: everyDay(habit) ? 'FREQ=DAILY' : `FREQ=WEEKLY;BYDAY=${habit.days.map((d) => BYDAY[d]).join(',')}`,
+    url: location.origin + location.pathname,
+  };
+}
+
+function googleCalendarUrl(habit) {
+  const ev = reminderEvent(habit);
+  const params = new URLSearchParams({
+    action: 'TEMPLATE',
+    text: ev.title,
+    details: `Open Streakfire to check in: ${ev.url}`,
+    dates: `${ev.start}/${ev.end}`,
+    recur: `RRULE:${ev.rule}`,
+  });
+  return `https://calendar.google.com/calendar/render?${params}`;
+}
+
+// iCalendar file (RFC 5545) with an alert at the start of the event.
+function reminderIcs(habit) {
+  const ev = reminderEvent(habit);
+  const esc = (t) => t.replace(/\\/g, '\\\\').replace(/([;,])/g, '\\$1').replace(/\r?\n/g, '\\n');
+  const utc = new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d+/, '');
+  const lines = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//Streakfire//Habit reminder//EN',
+    'CALSCALE:GREGORIAN',
+    'METHOD:PUBLISH',
+    'BEGIN:VEVENT',
+    // Same UID each time, so re-adding updates the event instead of duplicating it.
+    `UID:${habit.id}@streakfire`,
+    `SEQUENCE:${Math.floor(Date.now() / 1000)}`,
+    `DTSTAMP:${utc}`,
+    `DTSTART:${ev.start}`,
+    `DTEND:${ev.end}`,
+    `RRULE:${ev.rule}`,
+    `SUMMARY:${esc(ev.title)}`,
+    `DESCRIPTION:${esc(`Open Streakfire to check in: ${ev.url}`)}`,
+    `URL:${ev.url}`,
+    'BEGIN:VALARM',
+    'ACTION:DISPLAY',
+    `DESCRIPTION:${esc(ev.title)}`,
+    'TRIGGER:PT0M',
+    'END:VALARM',
+    'END:VEVENT',
+    'END:VCALENDAR',
+  ];
+  return lines.map(foldLine).join('\r\n') + '\r\n';
+}
+
+// Lines longer than 75 bytes continue on the next line after a space.
+function foldLine(line) {
+  const enc = new TextEncoder();
+  let out = '';
+  let bytes = 0;
+  for (const ch of line) {
+    const size = enc.encode(ch).length;
+    if (bytes + size > 75) {
+      out += '\r\n ';
+      bytes = 1;
+    }
+    out += ch;
+    bytes += size;
+  }
+  return out;
+}
+
+function download(name, type, text) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([text], { type }));
+  a.download = name;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
+$('remindTime').addEventListener('change', (e) => {
+  const habit = activeHabit();
+  if (!habit || !TIME_RE.test(e.target.value)) return;
+  habit.remind = e.target.value;
+  saveState();
+  $('remindGoogle').href = googleCalendarUrl(habit);
+});
+
+$('remindIcs').addEventListener('click', () => {
+  const habit = activeHabit();
+  if (!habit) return;
+  download('streakfire-reminder.ics', 'text/calendar', reminderIcs(habit));
+  toast('Reminder file ready', 'Open it to add the event to your calendar.');
 });
 
 // ---------- Settings, backup ----------
@@ -634,8 +842,8 @@ function confirmDialog(title, body, okLabel) {
 
 $('settingsBtn').addEventListener('click', () => {
   const habit = activeHabit();
-  $('settingsHabit').hidden = !habit;
   if (habit) $('renameInput').value = habit.name;
+  renderHabitSettings();
   $('settingsDialog').showModal();
 });
 
@@ -647,6 +855,7 @@ $('renameForm').addEventListener('submit', (e) => {
   habit.name = name;
   saveState();
   render();
+  renderHabitSettings();
   toast('Habit renamed');
 });
 
@@ -669,12 +878,7 @@ $('deleteHabitBtn').addEventListener('click', async () => {
 });
 
 $('exportBtn').addEventListener('click', () => {
-  const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = `streakfire-backup-${todayKey()}.json`;
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  download(`streakfire-backup-${todayKey()}.json`, 'application/json', JSON.stringify(state, null, 2));
 });
 
 $('importBtn').addEventListener('click', () => $('importFile').click());
