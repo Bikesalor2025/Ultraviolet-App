@@ -401,7 +401,7 @@ body[data-tier="cold"] .tier-badge { background: var(--surface-2); color: var(--
 
 /* ---------- Today ---------- */
 
-.today { max-width: 560px; margin: 0 auto; display: grid; gap: 16px; animation: rise 0.5s var(--ease) backwards; }
+.today-view { max-width: 560px; margin: 0 auto; display: grid; gap: 16px; animation: rise 0.5s var(--ease) backwards; }
 .today-head h1 { font-size: 1.8rem; letter-spacing: -0.03em; line-height: 1.1; }
 .today-progress { display: grid; gap: 8px; }
 .today-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 10px; }
@@ -503,7 +503,7 @@ body[data-tier="cold"] .tier-badge { background: var(--surface-2); color: var(--
 .cal-nav { display: flex; }
 .cal-weekdays, .cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
 .cal-weekdays { margin-bottom: 4px; text-align: center; font-size: 0.72rem; font-weight: 600; color: var(--muted); }
-.cal-grid { row-gap: 4px; touch-action: pan-y; }
+.cal-grid { --mark: 36px; row-gap: 4px; touch-action: pan-y; }
 .cal-grid.slide-next { animation: slide-next 0.3s var(--ease); }
 .cal-grid.slide-prev { animation: slide-prev 0.3s var(--ease); }
 @keyframes slide-next { from { opacity: 0; transform: translateX(18px); } }
@@ -525,7 +525,8 @@ body[data-tier="cold"] .tier-badge { background: var(--surface-2); color: var(--
 .day:disabled { color: #48423d; }
 .day .n {
   position: relative;
-  width: min(36px, 86%);
+  width: var(--mark);
+  max-width: 100%;
   aspect-ratio: 1;
   display: grid;
   place-items: center;
@@ -539,7 +540,11 @@ body[data-tier="cold"] .tier-badge { background: var(--surface-2); color: var(--
 .day.done::before {
   content: "";
   position: absolute;
-  inset: 11% 3px;
+  /* A circle the size of the number's own; runs stretch it sideways. */
+  top: calc(50% - var(--mark) / 2);
+  height: var(--mark);
+  left: max(0px, calc(50% - var(--mark) / 2));
+  right: max(0px, calc(50% - var(--mark) / 2));
   border-radius: 999px;
   background: color-mix(in srgb, var(--accent) 20%, transparent);
 }
@@ -565,14 +570,13 @@ body[data-tier="cold"] .tier-badge { background: var(--surface-2); color: var(--
 .day .dot {
   position: absolute;
   left: 50%;
-  bottom: 9%;
+  top: min(calc(50% + var(--mark) / 2 + 2px), calc(100% - 4px));
   width: 4px;
   height: 4px;
   margin-left: -2px;
   border-radius: 50%;
   background: var(--accent);
 }
-.day.today.done .dot { bottom: 3%; }
 
 .day.ignite::before { animation: fill-in 0.5s var(--spring) backwards; }
 .day.ignite .n { animation: pop-in 0.5s var(--spring) backwards; }
@@ -792,7 +796,7 @@ dialog.sheet:has(details.set) .sheet-head { margin-bottom: 4px; }
   .insights { grid-area: insights; padding: 22px; }
   .notes { grid-area: notes; padding: 22px; }
   .heat-scroll { margin: 0 -22px; padding: 0 22px 6px; }
-  .today { margin-top: 12px; }
+  .today-view { margin-top: 12px; }
   .action { grid-area: action; position: static; padding: 0; background: none; }
   #flame { height: 240px; }
   .habit-bar { justify-content: center; }
