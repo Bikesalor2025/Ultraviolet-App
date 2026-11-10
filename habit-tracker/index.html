@@ -25,6 +25,10 @@
     <symbol id="i-left" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></symbol>
     <symbol id="i-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></symbol>
     <symbol id="i-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+    <symbol id="i-up" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 15l7-7 7 7"/></symbol>
+    <symbol id="i-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 9l7 7 7-7"/></symbol>
+    <symbol id="i-share" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V4M8 8l4-4 4 4M5 13v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.500" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.500l4.500 4.500L19 7.500"/></symbol>
     <symbol id="i-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></symbol>
   </svg>
 
@@ -35,6 +39,9 @@
         <span>Streakfire</span>
       </div>
       <div class="top-actions">
+        <button id="shareBtn" class="icon-btn" type="button" aria-label="Share streak" hidden>
+          <svg class="icon" aria-hidden="true"><use href="#i-share"/></svg>
+        </button>
         <button id="lockBtn" class="icon-btn" type="button" hidden>
           <svg class="icon" aria-hidden="true"><use id="lockUse" href="#i-lock"/></svg>
         </button>
@@ -57,6 +64,21 @@
         </form>
       </section>
 
+      <section id="todayView" class="today" aria-label="Today" hidden>
+        <div class="today-head">
+          <h1>Today</h1>
+          <p id="todayDate" class="muted"></p>
+        </div>
+        <div class="today-progress">
+          <div class="milestone-row">
+            <span id="todayLabel" class="muted"></span>
+            <span id="todayCount"></span>
+          </div>
+          <div class="bar"><div id="todayFill" class="bar-fill"></div></div>
+        </div>
+        <ul id="todayList" class="today-list"></ul>
+      </section>
+
       <div id="board" class="board" hidden>
         <section class="hero card" aria-label="Streak">
           <canvas id="flame" aria-hidden="true"></canvas>
@@ -66,6 +88,8 @@
             <span id="tierBadge" class="tier-badge">Unlit</span>
           </div>
           <p id="statusLine" class="status muted" aria-live="polite"></p>
+          <div id="weekStrip" class="week-strip" role="img"></div>
+          <button id="noteTodayBtn" class="link" type="button"></button>
 
           <div class="milestone">
             <div class="milestone-row">
@@ -101,6 +125,43 @@
           <div id="calWeekdays" class="cal-weekdays" aria-hidden="true"></div>
           <div id="calGrid" class="cal-grid"></div>
           <p id="calLegend" class="legend muted"></p>
+        </section>
+
+        <section class="insights card" aria-label="Insights">
+          <h2>Insights</h2>
+          <p id="insEmpty" class="muted">Check in a few times to see your patterns here.</p>
+          <div id="insBody">
+            <dl class="stats two">
+              <div><dd id="insRate">–</dd><dt>Last 30 days</dt></div>
+              <div><dd id="insBest">–</dd><dt>Best day</dt></div>
+            </dl>
+            <h3>By weekday</h3>
+            <div id="insWeekdays" class="wd-bars"></div>
+            <h3>Past year</h3>
+            <div id="heatScroll" class="heat-scroll">
+              <div id="heatMonths" class="heat-months" aria-hidden="true"></div>
+              <div id="heat" class="heat" role="img"></div>
+            </div>
+            <h3>Longest streaks</h3>
+            <ol id="insRuns" class="runs"></ol>
+          </div>
+        </section>
+
+        <section class="notes card" aria-label="Notes">
+          <div class="card-head">
+            <h2>Notes</h2>
+            <span id="notesCount" class="pill"></span>
+          </div>
+          <p id="notesEmpty" class="muted">No notes yet. Tap a day in the calendar to add one.</p>
+          <div id="notesLocked" class="notes-locked">
+            <p class="muted">Your notes are locked.</p>
+            <button id="notesUnlockBtn" class="ghost" type="button">Unlock notes</button>
+          </div>
+          <div id="notesOpen">
+            <input id="noteSearch" type="search" placeholder="Search notes" aria-label="Search notes" autocomplete="off" enterkeyhint="search">
+            <ul id="noteList" class="note-list"></ul>
+            <p id="noteNoMatch" class="muted" hidden>No notes match.</p>
+          </div>
         </section>
       </div>
     </main>
@@ -159,6 +220,10 @@
         <div id="newDueLabel" class="field-label">Due days</div>
         <div id="newDueDays" class="day-picker" role="group" aria-labelledby="newDueLabel"></div>
       </div>
+      <div class="field">
+        <div id="newColorLabel" class="field-label">Colour</div>
+        <div id="newColors" class="swatches" role="group" aria-labelledby="newColorLabel"></div>
+      </div>
       <button class="primary" type="submit">Add habit</button>
     </form>
   </dialog>
@@ -169,37 +234,112 @@
       <button class="icon-btn" type="button" data-close aria-label="Close"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button>
     </header>
 
-    <section id="settingsHabit" class="settings-block">
-      <h3>This habit</h3>
-      <form id="renameForm" class="inline-form">
-        <input id="renameInput" type="text" maxlength="40" required aria-label="Habit name" autocomplete="off" enterkeyhint="done">
-        <button class="ghost" type="submit">Rename</button>
-      </form>
-      <div class="field">
-        <div id="dueLabel" class="field-label">Due days</div>
-        <div id="dueDays" class="day-picker" role="group" aria-labelledby="dueLabel"></div>
-        <p class="muted small">Days off never break the streak.</p>
-      </div>
-      <div class="field">
-        <label class="field-label" for="remindTime">Reminder</label>
-        <div class="row">
-          <input id="remindTime" type="time" value="20:00" required>
-          <button id="remindIcs" class="ghost" type="button">Add to calendar</button>
+    <details id="settingsHabit" class="set" open>
+      <summary>This habit</summary>
+      <div class="set-body">
+        <form id="renameForm" class="inline-form">
+          <input id="renameInput" type="text" maxlength="40" required aria-label="Habit name" autocomplete="off" enterkeyhint="done">
+          <button class="ghost" type="submit">Rename</button>
+        </form>
+        <div class="field">
+          <div id="colorLabel" class="field-label">Colour</div>
+          <div id="colors" class="swatches" role="group" aria-labelledby="colorLabel"></div>
         </div>
-        <p class="muted small">Adds a repeating event on this habit's due days, and your calendar app alerts you. <a id="remindGoogle" href="#" target="_blank" rel="noopener noreferrer">Use Google Calendar instead</a>.</p>
+        <div class="field">
+          <div id="dueLabel" class="field-label">Due days</div>
+          <div id="dueDays" class="day-picker" role="group" aria-labelledby="dueLabel"></div>
+          <p class="muted small">Days off never break the streak.</p>
+        </div>
+        <div class="field">
+          <label class="field-label" for="remindTime">Reminder</label>
+          <div class="row">
+            <input id="remindTime" type="time" value="20:00" required>
+            <button id="remindIcs" class="ghost" type="button">Add to calendar</button>
+          </div>
+          <p class="muted small">Adds a repeating event on this habit's due days, and your calendar app alerts you. <a id="remindGoogle" href="#" target="_blank" rel="noopener noreferrer">Use Google Calendar instead</a>.</p>
+        </div>
+        <div class="row">
+          <button id="archiveHabitBtn" class="ghost" type="button">Archive</button>
+          <button id="deleteHabitBtn" class="ghost danger" type="button">Delete this habit</button>
+        </div>
       </div>
-      <button id="deleteHabitBtn" class="ghost danger" type="button">Delete this habit</button>
-    </section>
+    </details>
 
-    <section class="settings-block">
-      <h3>Backup</h3>
-      <p class="muted">Everything lives in this browser. Export a file to keep a copy or move to another device. Notes stay encrypted in the file.</p>
-      <div class="row">
-        <button id="exportBtn" class="ghost" type="button">Export backup</button>
-        <button id="importBtn" class="ghost" type="button">Import backup</button>
-        <input id="importFile" type="file" accept="application/json,.json" hidden>
+    <details id="settingsHabits" class="set">
+      <summary>All habits</summary>
+      <div class="set-body">
+        <p id="manageEmpty" class="muted small">No habits yet.</p>
+        <ul id="manageList" class="manage-list"></ul>
       </div>
-    </section>
+    </details>
+
+    <details id="settingsNotes" class="set">
+      <summary>Notes and privacy</summary>
+      <div class="set-body">
+        <p id="noVaultMsg" class="muted small">You haven't set a notes password yet. You'll choose one when you add your first note.</p>
+        <div id="vaultSettings" class="set-body">
+          <div class="field">
+            <label class="field-label" for="autoLock">Lock notes automatically</label>
+            <select id="autoLock">
+              <option value="1">After 1 minute idle</option>
+              <option value="5">After 5 minutes idle</option>
+              <option value="15">After 15 minutes idle</option>
+              <option value="60">After 1 hour idle</option>
+              <option value="0">Only when I close the app</option>
+            </select>
+          </div>
+          <form id="pwForm">
+            <div class="field-label">Change password</div>
+            <label>Current password <input id="pwCurrent" type="password" autocomplete="current-password" required></label>
+            <label>New password <input id="pwNew" type="password" autocomplete="new-password" minlength="6" required></label>
+            <label>Confirm new password <input id="pwNew2" type="password" autocomplete="new-password" required enterkeyhint="done"></label>
+            <p id="pwErr" class="error" role="alert"></p>
+            <button class="ghost" type="submit">Change password</button>
+          </form>
+          <div class="field">
+            <button id="exportNotesBtn" class="ghost" type="button">Export notes as text</button>
+            <p class="muted small">Saves every note as a readable file. That file is not encrypted.</p>
+          </div>
+        </div>
+      </div>
+    </details>
+
+    <details id="settingsData" class="set">
+      <summary>Backup and data</summary>
+      <div class="set-body">
+        <p class="muted small">Everything lives in this browser. Export a file to keep a copy or move to another device. Notes stay encrypted in the file.</p>
+        <div class="row">
+          <button id="exportBtn" class="ghost" type="button">Export backup</button>
+          <button id="importBtn" class="ghost" type="button">Import backup</button>
+          <input id="importFile" type="file" accept="application/json,.json" hidden>
+        </div>
+        <button id="eraseBtn" class="ghost danger" type="button">Erase all data</button>
+      </div>
+    </details>
+  </dialog>
+
+  <dialog id="unlockDialog" class="sheet" aria-labelledby="unlockTitle">
+    <header class="sheet-head">
+      <h2 id="unlockTitle">Unlock notes</h2>
+      <button class="icon-btn" type="button" data-close aria-label="Close"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button>
+    </header>
+    <form id="unlockForm">
+      <label>Password <input id="unlockPw" type="password" autocomplete="current-password" required enterkeyhint="go"></label>
+      <p id="unlockDialogErr" class="error" role="alert"></p>
+      <button class="primary" type="submit">Unlock</button>
+    </form>
+  </dialog>
+
+  <dialog id="shareDialog" class="sheet" aria-labelledby="shareTitle">
+    <header class="sheet-head">
+      <h2 id="shareTitle">Share your streak</h2>
+      <button class="icon-btn" type="button" data-close aria-label="Close"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button>
+    </header>
+    <canvas id="sharePreview" class="share-preview" width="1080" height="1350" role="img" aria-label="Preview of the share image"></canvas>
+    <div class="row">
+      <button id="shareSend" class="primary" type="button">Share</button>
+      <button id="shareSave" class="ghost" type="button">Save image</button>
+    </div>
   </dialog>
 
   <dialog id="confirmDialog" class="sheet" aria-labelledby="confirmTitle">

@@ -276,6 +276,31 @@ export class Flame {
     ctx.globalAlpha = 1;
   }
 
+  // Paints one still flame for `streak` onto any canvas, at that canvas's own
+  // pixel size. Used for the share image.
+  static still(canvas, streak) {
+    const tier = tierFor(streak).id;
+    const f = Object.create(Flame.prototype);
+    Object.assign(f, {
+      c: canvas,
+      ctx: canvas.getContext('2d'),
+      w: canvas.width,
+      h: canvas.height,
+      dpr: 1,
+      time: 1.3,
+      size: sizeFor(streak),
+      target: sizeFor(streak),
+      dim: 1,
+      atRisk: false,
+      ghost: streak > 0 ? 0 : 1,
+      tier: tier === 'cold' ? 'spark' : tier,
+      sparks: [],
+      rings: [],
+    });
+    f.colors = PALETTES[f.tier].map((c) => c.slice());
+    f.draw(1);
+  }
+
   // Reduced motion: jump straight to the end state and paint one frame.
   renderStill() {
     this.size = this.target;
