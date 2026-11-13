@@ -1,0 +1,24 @@
+{
+	"name": "lumen-wallpaper-engine",
+	"productName": "Lumen",
+	"version": "1.0.0",
+	"description": "Live wallpaper engine",
+	"main": "main.js",
+	"private": true,
+	"scripts": {
+		"start": "electron .",
+		"dist": "electron-builder"
+	},
+	"devDependencies": {
+		"electron": "^33.2.0",
+		"electron-builder": "^25.1.8"
+	},
+	"build": {
+		"appId": "app.lumen.wallpaper",
+		"productName": "Lumen",
+		"files": ["main.js", "index.html", "css/**", "js/**"],
+		"win": { "target": "nsis" },
+		"mac": { "target": "dmg", "category": "public.app-category.entertainment" },
+		"linux": { "target": "AppImage", "category": "Utility" }
+	}
+}

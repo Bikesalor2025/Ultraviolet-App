@@ -1,14 +1,24 @@
 # Lumen — Wallpaper Engine
 
-A live wallpaper engine that runs in the browser. No build step, no dependencies.
+A live wallpaper engine. Runs as a desktop app (Electron) or directly in a browser.
 
-## Run
+## Run as a desktop app
 
-Open `index.html` in a browser, or serve the folder:
+Requires [Node.js](https://nodejs.org) 18 or newer.
 
 ```sh
-npx serve wallpaper-engine
+cd wallpaper-engine
+npm install
+npm start
 ```
+
+To build an installer for your system (Windows `.exe`, macOS `.dmg`, Linux `.AppImage`), output goes to `dist/`:
+
+```sh
+npm run dist
+```
+
+It also still runs in a browser: open `index.html`.
 
 ## Features
 
