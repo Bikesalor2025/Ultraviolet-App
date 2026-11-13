@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<meta name="color-scheme" content="dark" />
+		<title>Lumen — Wallpaper Engine</title>
+		<link rel="stylesheet" href="css/style.css" />
+	</head>
+	<body>
+		<div id="stage" aria-hidden="true"></div>
+		<div id="vignette" aria-hidden="true"></div>
+		<div id="clock" class="clock" aria-hidden="true" hidden>
+			<div class="clock-inner">
+				<div class="clock-time"></div>
+				<div class="clock-date"></div>
+			</div>
+		</div>
+
+		<div id="ui">
+			<header class="topbar glass">
+				<div class="brand">
+					<span class="logo" aria-hidden="true"></span>
+					<span class="brand-name">Lumen</span>
+				<label class="search">
+					<i data-icon="search"></i>
+					<input
+						id="search"
+						type="search"
+						placeholder="Search wallpapers"
+						autocomplete="off"
+						spellcheck="false"
+					/>
+					<kbd>/</kbd>
+				</label>
+				</div>
+
+				<div class="transport">
+					<button class="icon-btn" id="btn-prev" data-tip="Previous (←)" aria-label="Previous wallpaper"><i data-icon="prev"></i></button>
+					<button class="icon-btn primary" id="btn-play" data-tip="Pause (Space)" aria-label="Pause"><i data-icon="pause"></i></button>
+					<button class="icon-btn" id="btn-next" data-tip="Next (→)" aria-label="Next wallpaper"><i data-icon="next"></i></button>
+				</div>
+
+				<div class="actions">
+					<button class="icon-btn" id="btn-library" data-tip="Library" aria-label="Toggle library"><i data-icon="grid"></i></button>
+					<button class="icon-btn" id="btn-inspector" data-tip="Settings" aria-label="Toggle settings"><i data-icon="sliders"></i></button>
+					<span class="sep"></span>
+					<button class="icon-btn" id="btn-snap" data-tip="Save image (S)" aria-label="Save image"><i data-icon="camera"></i></button>
+					<button class="icon-btn" id="btn-full" data-tip="Fullscreen (F)" aria-label="Fullscreen"><i data-icon="maximize"></i></button>
+					<button class="icon-btn" id="btn-hide" data-tip="Hide controls (H)" aria-label="Hide controls"><i data-icon="eye"></i></button>
+				</div>
+			</header>
+
+			<aside id="library" class="panel glass left" aria-label="Wallpaper library">
+				<div class="panel-head">
+					<h2>Library</h2>
+					<span class="count" id="lib-count"></span>
+					<button class="btn small" id="btn-import"><i data-icon="plus"></i>Import</button>
+				</div>
+				<div class="chips" id="chips" role="tablist"></div>
+				<div class="grid scroll" id="grid"></div>
+			</aside>
+
+			<aside id="inspector" class="panel glass right" aria-label="Settings">
+				<div class="tabs" id="tabs" role="tablist">
+					<button role="tab" data-tab="wallpaper" class="active">Wallpaper</button>
+					<button role="tab" data-tab="display">Display</button>
+					<button role="tab" data-tab="widgets">Widgets</button>
+					<button role="tab" data-tab="playlist">Playlist</button>
+				</div>
+				<div class="tab-body scroll" id="tab-wallpaper"></div>
+				<div class="tab-body scroll" id="tab-display" hidden></div>
+				<div class="tab-body scroll" id="tab-widgets" hidden></div>
+				<div class="tab-body scroll" id="tab-playlist" hidden></div>
+			</aside>
+
+			<footer class="statusbar glass">
+				<span class="eq" aria-hidden="true"><b></b><b></b><b></b></span>
+				<span id="st-name" class="st-name"></span>
+				<span class="dot"></span>
+				<span id="st-fps">– fps</span>
+				<span class="dot dot-res"></span>
+				<span id="st-res"></span>
+				<span class="progress" id="st-progress" hidden><b></b></span>
+			</footer>
+		</div>
+
+		<button id="reveal" class="glass"><i data-icon="eye"></i>Show controls <kbd>H</kbd></button>
+		<div id="drop" class="drop"><div><i data-icon="upload"></i>Drop images or videos to add them</div></div>
+		<div id="toasts" aria-live="polite"></div>
+		<input id="file" type="file" accept="image/*,video/*" multiple hidden />
+
+		<script src="js/wallpapers.js"></script>
+		<script src="js/app.js"></script>
+	</body>
+</html>
